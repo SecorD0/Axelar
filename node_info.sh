@@ -1,16 +1,7 @@
 #!/bin/bash
-# Config
-daemon="`which axelard`"
-token_name="..."
-node_dir="$HOME/.axelar/"
-wallet_name="$axelar_wallet_name"
-wallet_address="$axelar_wallet_address"
-wallet_address_variable="axelar_wallet_address"
-global_rpc="https://axelar-rpc.quickapi.com/"
-explorer_url_template="https://axelar.coinhippo.io/validator/"
-
 # Default variables
 language="EN"
+network="mainnet"
 raw_output="false"
 
 # Options
@@ -26,10 +17,11 @@ while test $# -gt 0; do
 		echo -e "Usage: script ${C_LGn}[OPTIONS]${RES}"
 		echo
 		echo -e "${C_LGn}Options${RES}:"
-		echo -e "  -h, --help               show help page"
-		echo -e "  -l, --language LANGUAGE  use the LANGUAGE for texts"
-		echo -e "                           LANGUAGE is '${C_LGn}EN${RES}' (default), '${C_LGn}RU${RES}'"
-		echo -e "  -ro, --raw-output        the raw JSON output"
+		echo -e "  -h,  --help               show help page"
+		echo -e "  -l,  --language LANGUAGE  use the LANGUAGE for texts"
+		echo -e "                            LANGUAGE is '${C_LGn}EN${RES}' (default), '${C_LGn}RU${RES}'"
+		echo -e "  -t,  --testnet            use the script in a testnet"
+		echo -e "  -ro, --raw-output         the raw JSON output"
 		echo
 		echo -e "You can use either \"=\" or \" \" as an option and value ${C_LGn}delimiter${RES}"
 		echo
@@ -45,6 +37,10 @@ while test $# -gt 0; do
 		language=`option_value $1`
 		shift
 		;;
+	-t|--testnet)
+		network="testnet"
+		shift
+		;;
 	-ro|--raw-output)
 		raw_output="true"
 		shift
@@ -55,17 +51,36 @@ while test $# -gt 0; do
 	esac
 done
 
+# Config
+daemon="`which axelard`"
+token_name="axl"
+node_dir="$HOME/.axelar/"
+wallet_name="$axelar_wallet_name"
+wallet_address="$axelar_wallet_address"
+wallet_address_variable="axelar_wallet_address"
+validator_address="$axelar_validator_address"
+validator_address_variable="axelar_validator_address"
+if [ "$network" == "testnet" ]; then
+	global_rpc=""
+	explorer_url_template="https://testnet.axelarscan.io/validator/"
+	current_block=`wget -qO- "https://api.axelarscan.io/testnet/?module=rpc&path=%2Fdump_consensus_state" | jq -r ".height"`
+else
+	global_rpc="https://axelar-rpc.quickapi.com/"
+	explorer_url_template="https://axelarscan.io/validator/"
+	current_block=`wget -qO- "${global_rpc}abci_info" | jq -r ".result.response.last_block_height"`
+fi
+
 # Functions
 printf_n(){ printf "$1\n" "${@:2}"; }
 main() {
 	# Texts
 	if [ "$language" = "RU" ]; then
-		local t_ewa="Для просмотра баланса кошелька необходимо добавить его в систему виде переменной, поэтому ${C_LGn}введите пароль от кошелька${RES}"
+		local t_ewa="Для просмотра баланса кошелька необходимо добавить его в систему виде переменной, поэтому ${C_LGn}введите пароль от кошелька${RES}: "
 		local t_ewa_err="${C_LR}Не удалось получить адрес кошелька!${RES}"
 		local t_nn="\nНазвание ноды:              ${C_LGn}%s${RES}"
 		local t_id="Keybase ключ:               ${C_LGn}%s${RES}"
 		local t_si="Сайт:                       ${C_LGn}%s${RES}"
-		local t_det="Описание:                   ${C_LGn}%s${RES}\n"
+		local t_det="Описание:\n${C_LGn}%s${RES}\n"
 		
 		local t_net="Сеть:                       ${C_LGn}%s${RES}"
 		local t_ni="ID ноды:                    ${C_LGn}%s${RES}"
@@ -75,7 +90,8 @@ main() {
 		local t_sy2="Осталось нагнать:           ${C_LR}%d-%d=%d (около %.2f мин.)${RES}"
 		local t_sy3="Нода синхронизирована:      ${C_LGn}да${RES}"
 		
-		local t_va="\nАдрес валидатора:           ${C_LGn}%s${RES}"
+		local t_vm="\nНазвание валидатора:        ${C_LGn}%s${RES}"
+		local t_va="Адрес валидатора:           ${C_LGn}%s${RES}"
 		local t_eu="Страница в эксплорере:      ${C_LGn}%s${RES}"
 		local t_pk="Публичный ключ валидатора:  ${C_LGn}%s${RES}"
 		local t_nij1="Валидатор в тюрьме:         ${C_LR}да${RES}"
@@ -88,12 +104,12 @@ main() {
 	# Send Pull request with new texts to add a language - https://github.com/SecorD0/Axelar/blob/main/node_info.sh
 	#elif [ "$language" = ".." ]; then
 	else
-		local t_ewa="To view the wallet balance, you have to add it to the system as a variable, so ${C_LGn}enter the wallet password${RES}"
+		local t_ewa="To view the wallet balance, you have to add it to the system as a variable, so ${C_LGn}enter the wallet password${RES}: "
 		local t_ewa_err="${C_LR}Failed to get the wallet address!${RES}"
 		local t_nn="\nMoniker:                 ${C_LGn}%s${RES}"
 		local t_id="Keybase key:             ${C_LGn}%s${RES}"
 		local t_si="Website:                 ${C_LGn}%s${RES}"
-		local t_det="Details:                 ${C_LGn}%s${RES}\n"
+		local t_det="Details:\n${C_LGn}%s${RES}\n"
 		
 		local t_net="Network:                 ${C_LGn}%s${RES}"
 		local t_ni="Node ID:                 ${C_LGn}%s${RES}"
@@ -103,7 +119,8 @@ main() {
 		local t_sy2="It remains to catch up:  ${C_LR}%d-%d=%d (about %.2f min.)${RES}"
 		local t_sy3="Node is synchronized:    ${C_LGn}yes${RES}"
 		
-		local t_va="\nValidator address:       ${C_LGn}%s${RES}"
+		local t_vm="\nValidator moniker:       ${C_LGn}%s${RES}"
+		local t_va="Validator address:       ${C_LGn}%s${RES}"
 		local t_eu="Page in explorer:        ${C_LGn}%s${RES}"
 		local t_pk="Validator public key:    ${C_LGn}%s${RES}"
 		local t_nij1="Validator in a jail:     ${C_LR}yes${RES}"
@@ -117,43 +134,52 @@ main() {
 	
 	# Actions
 	sudo apt install bc -y &>/dev/null
-	if [ -n "$wallet_name" ] && [ ! -n "$wallet_address" ]; then
-		printf_n "$t_ewa"
-		local wallet_address=`$daemon keys show "$wallet_name" -a`
+	if [ -n "$wallet_name" ] && ([ ! -n "$wallet_address" ] || [ ! -n "$validator_address" ]); then
+		printf "$t_ewa"
+		local password
+		read password
+		local wallet_address=`echo "$password" | $daemon keys show "$wallet_name" -a`
 		if [ -n "$wallet_address" ]; then
+			local validator_address=`echo "$password" | $daemon keys show "$wallet_name" -a --bech val`
 			. <(wget -qO- https://raw.githubusercontent.com/SecorD0/utils/main/miscellaneous/insert_variable.sh) -n "$wallet_address_variable" -v "$wallet_address"
+			. <(wget -qO- https://raw.githubusercontent.com/SecorD0/utils/main/miscellaneous/insert_variable.sh) -n "$validator_address_variable" -v "$validator_address"
 		else
 			printf_n "$t_ewa_err"
 		fi
+		unset password
 	fi
 	
 	local local_rpc=`grep -oPm1 "(?<=^laddr = \")([^%]+)(?=\")" "${node_dir}config/config.toml"`
 	local status=`$daemon status --node "$local_rpc" 2>&1`
-	local moniker=`jq -r ".NodeInfo.moniker" <<< $status`
-	local node_info=`$daemon query staking validators --node "$local_rpc" --limit 1500 --output json | jq -r '.validators[] | select(.description.moniker=='\"$moniker\"')'`
-	local identity=`jq -r ".description.identity" <<< $node_info`
-	local website=`jq -r ".description.website" <<< $node_info`
-	local details=`jq -r ".description.details" <<< $node_info`
+	local moniker=`jq -r ".NodeInfo.moniker" <<< "$status"`
+	local node_info=`$daemon query staking validators --node "$local_rpc" --limit 10000 -oj | jq -r '.validators[] | select(.operator_address=='\"$validator_address\"')'`
+	local identity=`jq -r ".description.identity" <<< "$node_info"`
+	local website=`jq -r ".description.website" <<< "$node_info"`
+	local details=`jq -r ".description.details" <<< "$node_info"`
 	
-	local network=`jq -r ".NodeInfo.network" <<< $status`
-	local node_id=`jq -r ".NodeInfo.id" <<< $status`
+	local network=`jq -r ".NodeInfo.network" <<< "$status"`
+	local node_id=`jq -r ".NodeInfo.id" <<< "$status"`
 	local node_version=`$daemon version 2>&1`
-	local latest_block_height=`jq -r ".SyncInfo.latest_block_height" <<< $status`
-	local catching_up=`jq -r ".SyncInfo.catching_up" <<< $status`
+	local latest_block_height=`jq -r ".SyncInfo.latest_block_height" <<< "$status"`
+	local catching_up=`jq -r ".SyncInfo.catching_up" <<< "$status"`
 	
-	local validator_address=`jq -r ".operator_address" <<< $node_info`
+	local validator_moniker=`jq -r ".description.moniker" <<< "$node_info"`
 	if [ -n "$validator_address" ]; then local explorer_url="${explorer_url_template}${validator_address}"; fi
-	local validator_pub_key=`$daemon tendermint show-validator`
-	local jailed=`jq -r ".jailed" <<< $node_info`
-	local delegated=`bc -l <<< "$(jq -r ".tokens" <<< $node_info)/1000000" 2>/dev/null`
-	local voting_power=`jq -r ".ValidatorInfo.VotingPower" <<< $status`
+	local validator_pub_key=`$daemon tendermint show-validator | tr "\"" "'"`
+	local jailed=`jq -r ".jailed" <<< "$node_info"`
+	local delegated=`bc -l <<< "$(jq -r ".tokens" <<< "$node_info")/1000000" 2>/dev/null`
+	local voting_power=`jq -r ".ValidatorInfo.VotingPower" <<< "$status"`
 	if [ -n "$wallet_address" ]; then
-		local balance=`bc -l <<< "$($daemon query bank balances "$wallet_address" -o json --node "$local_rpc" | jq -r ".balances[0].amount")/1000000"`
+		if grep -q ":" <<< `echo "$global_rpc" | sed -e "s%http://%%; s%https://%%; s%tcp://%%"`; then
+			local balance=`bc -l <<< "$($daemon query bank balances "$wallet_address" -oj --node "$global_rpc" | jq -r ".balances[0].amount")/1000000"`
+		else
+			local balance=`bc -l <<< "$($daemon query bank balances "$wallet_address" -oj | jq -r ".balances[0].amount")/1000000"`
+		fi
 	fi
 
 	# Output
 	if [ "$raw_output" = "true" ]; then
-		printf_n '{"moniker": "%s", "identity": "%s", "website": "%s", "details": "%s", "network": "%s", "node_id": "%s", "node_version": "%s", "latest_block_height": %d, "catching_up": %b, "validator_address": "%s", "explorer_url": "%s", "validator_pub_key": "%s", "jailed": %b, "delegated": %.4f, "voting_power": %.4f, "wallet_address": "%s", "balance": %.4f}' \
+		printf_n '{"moniker": "%s", "identity": "%s", "website": "%s", "details": "%s", "network": "%s", "node_id": "%s", "node_version": "%s", "latest_block_height": %d, "catching_up": %b, "validator_moniker": "%s", "validator_address": "%s", "explorer_url": "%s", "validator_pub_key": "%s", "jailed": %b, "delegated": %.4f, "voting_power": %.4f, "wallet_address": "%s", "balance": %.4f}' \
 "$moniker" \
 "$identity" \
 "$website" \
@@ -163,6 +189,7 @@ main() {
 "$node_version" \
 "$latest_block_height" \
 "$catching_up" \
+"$validator_moniker" \
 "$validator_address" \
 "$explorer_url" \
 "$validator_pub_key" \
@@ -182,7 +209,6 @@ main() {
 		printf_n "$t_nv" "$node_version"
 		printf_n "$t_lb" "$latest_block_height"
 		if [ "$catching_up" = "true" ]; then
-			local current_block=`wget -qO- "${global_rpc}abci_info" | jq -r ".result.response.last_block_height"`
 			local diff=`bc -l <<< "$current_block-$latest_block_height"`
 			local takes_time=`bc -l <<< "$diff/15/60"`
 			printf_n "$t_sy1"
@@ -191,6 +217,7 @@ main() {
 			printf_n "$t_sy3"
 		fi
 		
+		printf_n "$t_vm" "$validator_moniker"
 		printf_n "$t_va" "$validator_address"
 		printf_n "$t_eu" "$explorer_url"
 		printf_n "$t_pk" "$validator_pub_key"
