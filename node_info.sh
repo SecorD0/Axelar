@@ -12,7 +12,7 @@ while test $# -gt 0; do
 	-h|--help)
 		. <(wget -qO- https://raw.githubusercontent.com/SecorD0/utils/main/logo.sh)
 		echo
-		echo -e "${C_LGn}Functionality${RES}: the script shows information about a Decentralize Web Services node"
+		echo -e "${C_LGn}Functionality${RES}: the script shows information about an Axelar node"
 		echo
 		echo -e "Usage: script ${C_LGn}[OPTIONS]${RES}"
 		echo
