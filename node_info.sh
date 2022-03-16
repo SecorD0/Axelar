@@ -1,7 +1,7 @@
 #!/bin/bash
 # Default variables
 language="EN"
-network="mainnet"
+network="testnet"
 raw_output="false"
 
 # Options
@@ -20,7 +20,7 @@ while test $# -gt 0; do
 		echo -e "  -h,  --help               show help page"
 		echo -e "  -l,  --language LANGUAGE  use the LANGUAGE for texts"
 		echo -e "                            LANGUAGE is '${C_LGn}EN${RES}' (default), '${C_LGn}RU${RES}'"
-		echo -e "  -t,  --testnet            use the script in a testnet"
+		echo -e "  -m,  --mainnet            use the script in a mainnet"
 		echo -e "  -ro, --raw-output         the raw JSON output"
 		echo
 		echo -e "You can use either \"=\" or \" \" as an option and value ${C_LGn}delimiter${RES}"
@@ -37,8 +37,8 @@ while test $# -gt 0; do
 		language=`option_value $1`
 		shift
 		;;
-	-t|--testnet)
-		network="testnet"
+	-m|--mainnet)
+		network="mainnet"
 		shift
 		;;
 	-ro|--raw-output)
@@ -60,14 +60,14 @@ wallet_address="$axelar_wallet_address"
 wallet_address_variable="axelar_wallet_address"
 validator_address="$axelar_validator_address"
 validator_address_variable="axelar_validator_address"
-if [ "$network" == "testnet" ]; then
-	global_rpc=""
-	explorer_url_template="https://testnet.axelarscan.io/validator/"
-	current_block=`wget -qO- "https://api.axelarscan.io/testnet/?module=rpc&path=%2Fdump_consensus_state" | jq -r ".height"`
-else
+if [ "$network" == "mainnet" ]; then
 	global_rpc="https://axelar-rpc.quickapi.com/"
 	explorer_url_template="https://axelarscan.io/validator/"
 	current_block=`wget -qO- "${global_rpc}abci_info" | jq -r ".result.response.last_block_height"`
+else
+	global_rpc=""
+	explorer_url_template="https://testnet.axelarscan.io/validator/"
+	current_block=`wget -qO- "https://api.axelarscan.io/testnet/?module=rpc&path=%2Fdump_consensus_state" | jq -r ".height"`
 fi
 
 # Functions
