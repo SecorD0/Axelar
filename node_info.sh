@@ -20,6 +20,7 @@ while test $# -gt 0; do
 		echo -e "  -h,  --help               show help page"
 		echo -e "  -l,  --language LANGUAGE  use the LANGUAGE for texts"
 		echo -e "                            LANGUAGE is '${C_LGn}EN${RES}' (default), '${C_LGn}RU${RES}'"
+		echo -e "  -t2, --testnet-2          use the script in a testnet-2"
 		echo -e "  -m,  --mainnet            use the script in a mainnet"
 		echo -e "  -ro, --raw-output         the raw JSON output"
 		echo
@@ -35,6 +36,10 @@ while test $# -gt 0; do
 	-l*|--language*)
 		if ! grep -q "=" <<< $1; then shift; fi
 		language=`option_value $1`
+		shift
+		;;
+	-t2|--testnet-2)
+		network="testnet-2"
 		shift
 		;;
 	-m|--mainnet)
@@ -60,7 +65,11 @@ wallet_address="$axelar_wallet_address"
 wallet_address_variable="axelar_wallet_address"
 validator_address="$axelar_validator_address"
 validator_address_variable="axelar_validator_address"
-if [ "$network" == "mainnet" ]; then
+if [ "$network" == "testnet-2" ]; then
+	global_rpc=""
+	explorer_url_template="https://testnet.explorer.testnet.run/axelar-testnet-2/staking/"
+	current_block=`wget -qO- "https://api.axl.testnet.run/blocks/latest" | jq -r ".block.header.height"`
+elif [ "$network" == "mainnet" ]; then
 	global_rpc="https://axelar-rpc.quickapi.com/"
 	explorer_url_template="https://axelarscan.io/validator/"
 	current_block=`wget -qO- "${global_rpc}abci_info" | jq -r ".result.response.last_block_height"`
