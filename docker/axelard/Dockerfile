@@ -1,19 +1,18 @@
-FROM ubuntu
+FROM ubuntu:20.04
 
-LABEL creator="SecorD | Let's Node"
-LABEL url="https://t.me/letskynode — node Community"
+LABEL creator="SecorD >> 1package"
+LABEL url="📦 All in https://t.me/OnePackage"
 
 WORKDIR root
 
 COPY entrypoint.sh .
 
-ENV version="0.15.0"
-
 RUN apt update && \
     apt upgrade -y && \
     apt install wget jq -y; \
-    apt clean
+    apt clean; \
+    chmod +x entrypoint.sh
 
-EXPOSE 1317 6060 9090 9091 26656 26657 26660
+EXPOSE 8080 9000 9184
 
 ENTRYPOINT ["./entrypoint.sh"]
